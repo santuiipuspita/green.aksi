@@ -77,6 +77,23 @@ path.leaflet-interactive{animation:pop .55s cubic-bezier(.3,1.6,.5,1) backwards;
 @keyframes float{50%{transform:translate(-24px,26px) scale(1.1)}}
 @keyframes drift{0%,100%{transform:translateY(0) rotate(-12deg)}50%{transform:translateY(-22px) rotate(14deg)}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}.rv{opacity:1!important;transform:none!important}}
+
+.ph{position:relative;aspect-ratio:16/9;border-radius:10px;overflow:hidden;background:linear-gradient(135deg,var(--c,#2d6a4f),#10281f);display:grid;place-items:center;font-size:2.6rem;margin-bottom:.7rem}
+.ph img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.pb p{font-size:.88rem;color:#4a6558;margin:.3rem 0 .6rem}.pb small{display:block;color:#4a6558;font-size:.78rem;margin-bottom:.6rem}
+.mod{position:fixed;inset:0;background:#10281fb3;z-index:3000;display:grid;place-items:center;padding:1rem;animation:rise .25s}
+.mb{background:#fff;border-radius:16px;padding:1.4rem;max-width:520px;width:100%;max-height:90vh;overflow:auto;position:relative}
+.mb .x{position:absolute;right:.7rem;top:.4rem;border:0;background:none;font-size:1.7rem;cursor:pointer}
+.steps{list-style:none;padding:0;counter-reset:s;display:grid;gap:.9rem;margin-top:1rem}
+.steps li{counter-increment:s;padding-left:2.2rem;position:relative;font-size:.92rem}
+.steps li:before{content:counter(s);position:absolute;left:0;top:0;width:1.6rem;height:1.6rem;border-radius:50%;background:var(--mist);display:grid;place-items:center;font-weight:800;font-size:.8rem}
+.steps li.done:before{content:"\2713";background:var(--leaf);color:#fff}
+.steps img{max-width:220px;border-radius:10px;border:1px solid var(--line);display:block;margin:.5rem 0}
+.lock{text-align:center;padding:1.6rem;margin-top:1rem}.lock p{color:#4a6558;margin:.4rem 0 1rem}
+details{margin-top:.8rem}summary{cursor:pointer;font-weight:700;font-size:.9rem}
+.art{display:block;text-decoration:none}.art small{color:#4a6558}.art b{font-size:.95rem}
+a.chip{text-decoration:none}.btn:disabled{opacity:.4;cursor:not-allowed}
+h3{margin-bottom:.3rem}
 </style>
 </head>
 <body>
@@ -86,74 +103,155 @@ path.leaflet-interactive{animation:pop .55s cubic-bezier(.3,1.6,.5,1) backwards;
 </header>
 <div id="sp"></div>
 <main id="app"></main>
-<footer>GreenAksi — inovasi digital untuk lingkungan Indonesia. Data pada prototipe ini bersifat contoh.</footer>
+<footer>GreenAksi · Gerakan digital anak muda untuk lingkungan Indonesia</footer>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
-/* ============ DATA CONTOH (ganti dengan data asli kamu) ============ */
-/* ===== FIREBASE: isi 4 nilai ini dari Firebase Console (Project settings > Your apps > Web) ===== */
+/* ===== KONFIGURASI: isi sesuai kebutuhan ===== */
 const FBCFG={apiKey:'ISI_API_KEY',authDomain:'ISI.firebaseapp.com',projectId:'ISI_PROJECT_ID',appId:'ISI_APP_ID'};
 const ADMINS=['emailkamu@gmail.com'];
+const CFG={gformVerif:'',gformBukti:'',qris:'img/qris.png',rekening:'',kontak:''};
 const CLOUD=!FBCFG.apiKey.startsWith('ISI');
 let CLOUDAPI=null;const C={reports:[],orgs:[],orgevents:[],user:null};
-const me=()=>(S.get('user',null)||{}).email||'anon';
-const add=(c,o)=>{if(CLOUD)return CLOUDAPI.add(c,o);const a=S.get(c,[]);a.push({...o,id:Date.now()});S.set(c,a)};
-const upd=(c,id,o)=>{if(CLOUD)return CLOUDAPI.upd(c,id,o);const a=S.get(c,[]),x=a.find(z=>String(z.id)===String(id));if(x){Object.assign(x,o);S.set(c,a)}};
-const logout=()=>CLOUD?CLOUDAPI.logout():(S.set('user',null),go());
-const refresh=()=>{const t=document.activeElement&&document.activeElement.tagName;if(!/INPUT|TEXTAREA|SELECT/.test(t))go(true)};
-const PAGES=[
- ['beranda','Beranda'],['greenmap','GreenMap'],['youth','Youth Action'],
- ['greenfund','GreenFund'],['ecolearn','EcoLearn'],['myimpact','My Impact'],['organisasi','Organisasi'],['akun','Akun']];
-const TOOLS=[
- ['greenmap','🗺️','GreenMap','Peta interaktif kondisi lingkungan: banjir, longsor, karhutla, pencemaran, bank sampah, dan komunitas.'],
- ['youth','🙌','Youth Action','Temukan dan daftar kegiatan sukarelawan lingkungan di sekitarmu.'],
- ['greenfund','🌱','GreenFund','Dukung program lingkungan dengan target dan laporan dana yang transparan.'],
- ['ecolearn','📚','EcoLearn','Artikel, panduan sampah, mitigasi bencana, dan tantangan mingguan.'],
- ['myimpact','🏅','My Impact','Lihat total kontribusimu: laporan, relawan, donasi, dan tantangan.']];
-const MARKERS=[
- {t:'banjir',n:'Banjir Kampung Melayu',lat:-6.225,lng:106.866,d:'Genangan 60 cm setelah hujan deras.'},
- {t:'longsor',n:'Longsor Puncak Bogor',lat:-6.66,lng:106.95,d:'Jalur tertutup material longsor.'},
- {t:'karhutla',n:'Titik Panas Riau',lat:0.51,lng:101.45,d:'Terdeteksi titik api di lahan gambut.'},
- {t:'pencemaran',n:'Pencemaran Citarum',lat:-6.98,lng:107.6,d:'Limbah cair di aliran sungai.'},
- {t:'banksampah',n:'Bank Sampah Bersinar',lat:-7.795,lng:110.37,d:'Buka Sen–Sab, 08.00–15.00.'},
- {t:'komunitas',n:'Komunitas Sungai Bersih',lat:-7.25,lng:112.75,d:'Aksi bersih sungai tiap Minggu.'}];
-const TYPE={banjir:['Banjir','#1d6f8a'],longsor:['Longsor','#8a5a2b'],karhutla:['Karhutla','#c8483a'],pencemaran:['Pencemaran','#7a4aa0'],banksampah:['Bank Sampah','#2d6a4f'],komunitas:['Komunitas','#f2b134']};
-const EVENTS=[
- {id:1,n:'Bersih Sungai Ciliwung',tgl:'Sab, 22 Nov 2026 · 07.00',lok:'Jakarta Timur',k:'Bersih-bersih',q:40},
- {id:2,n:'Tanam 500 Mangrove',tgl:'Min, 30 Nov 2026 · 08.00',lok:'Muara Angke, Jakarta',k:'Penanaman pohon',q:100},
- {id:3,n:'Edukasi Pilah Sampah di Sekolah',tgl:'Sab, 6 Des 2026 · 09.00',lok:'Surakarta',k:'Edukasi',q:25},
- {id:4,n:'Kampanye Hari Bebas Plastik',tgl:'Min, 14 Des 2026 · 06.30',lok:'Bandung',k:'Kampanye',q:60}];
-const ORGS=[{id:1,n:'Komunitas Sungai Bersih',kota:'Surakarta',v:1},{id:2,n:'Bank Sampah Bersinar',kota:'Yogyakarta',v:1}];
-const DOCS=[['Bersih Pantai','#1d6f8a'],['Tanam Pohon','#2d6a4f'],['Workshop Kompos','#8a5a2b']];
-const FUNDS=[
- {id:1,n:'Bibit Mangrove Pesisir Demak',t:25000000,c:17400000,keb:'Bibit, tenaga tanam, perawatan 6 bulan.'},
- {id:2,n:'Fasilitas Pengolahan Sampah Desa',t:40000000,c:12800000,keb:'Mesin pencacah, gerobak, kontainer pilah.'},
- {id:3,n:'Pemulihan Taman Kota',t:15000000,c:14100000,keb:'Pohon peneduh, bangku, tempat sampah terpilah.'}];
-const LAPORAN=[['Pembelian 2.000 bibit mangrove',8500000],['Upah penanam lokal',4200000],['Alat pencacah sampah',6500000],['Dokumentasi & pelaporan',900000]];
-const ARTIKEL=[
- ['Mengapa Sampah Plastik Berbahaya bagi Laut','Plastik terurai ratusan tahun dan berubah menjadi mikroplastik yang masuk rantai makanan.'],
- ['Infografis: Perjalanan Sampah dari Rumah','Dari tempat sampah, TPS, hingga TPA — dan titik di mana kamu bisa mengurangi.'],
- ['Hutan Hujan dan Iklim Indonesia','Hutan menyimpan karbon dan mengatur tata air; kebakaran melepaskannya kembali.']];
-const PILAH=[['Organik','Sisa makanan, daun. Jadikan kompos.','#52b788'],['Anorganik','Plastik, kaleng, kertas bersih. Setor ke bank sampah.','#1d6f8a'],['B3','Baterai, lampu, obat kedaluwarsa. Serahkan ke titik khusus.','#c8483a']];
-const MITIGASI=[['Banjir','Pindahkan barang ke tempat tinggi, matikan listrik, siapkan tas siaga, ikuti info BMKG/BPBD.'],['Longsor','Waspada retakan tanah dan air keruh di lereng; jauhi area lereng saat hujan lebat.'],['Karhutla','Jangan membakar lahan, laporkan titik api, gunakan masker saat kabut asap.']];
-const CHALLENGE=[['Bawa tumbler & tas belanja sendiri selama seminggu',10],['Pilah sampah rumah jadi organik dan anorganik',15],['Matikan lampu & alat elektronik yang tidak dipakai',10],['Ajak 1 teman ikut kegiatan relawan',20]];
-const WEEK=new Date().toISOString().slice(0,10).slice(0,8)+'W'+Math.ceil(new Date().getDate()/7);
-
-/* ============ STATE (localStorage) ============ */
-const S={
- get(k,d){if(CLOUD&&k==='user')return C.user;if(CLOUD&&k in C)return C[k];try{return JSON.parse(localStorage.getItem('ga_'+k))??d}catch(e){return d}},
- set(k,v){try{localStorage.setItem('ga_'+k,JSON.stringify(v))}catch(e){}}};
-const rp=n=>'Rp'+n.toLocaleString('id-ID');
-const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const h=s=>{let x=0;for(const c of s)x=(x*31+c.charCodeAt(0))|0;return x};
-const ADMIN={nama:'Admin GreenAksi',email:'admin@greenaksi.id',pw:h('admin123'),role:'admin'};
-const allEvents=()=>[...EVENTS,...S.get('orgevents',[])];
-const allOrgs=()=>[...ORGS,...S.get('orgs',[])];
 const $=s=>document.querySelector(s);
-const impact=()=>{const r=S.get('reports',[]).filter(x=>x.owner===me()).length,v=S.get('regs',[]).length,d=S.get('dons',[]).reduce((a,b)=>a+b.amt,0),c=(S.get('chal',{})[WEEK]||[]).length;
- const pts=r*20+v*30+Math.floor(d/10000)+c*10;return{r,v,d,c,pts}};
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const h=s=>{let x=0;for(const c of s)x=(x*31+c.charCodeAt(0))|0;return x};
+const rp=n=>'Rp'+n.toLocaleString('id-ID');
+const A=(u,t,c='')=>`<a class="${c}" href="${esc(u)}" target="_blank" rel="noopener">${t}</a>`;
+const S={get(k,d){if(CLOUD&&k==='user')return C.user;if(CLOUD&&k in C)return C[k];try{return JSON.parse(localStorage.getItem('ga_'+k))??d}catch(e){return d}},
+ set(k,v){try{localStorage.setItem('ga_'+k,JSON.stringify(v))}catch(e){}}};
+const me=()=>(S.get('user',null)||{}).email||'anon';
+const isAdm=()=>ADMINS.includes(me());
+const add=(c,o)=>{if(CLOUD)return CLOUDAPI.add(c,o);const a=S.get(c,[]);a.push({...o,id:String(Date.now())});S.set(c,a)};
+const upd=(c,id,o)=>{if(CLOUD)return CLOUDAPI.upd(c,id,o);const a=S.get(c,[]),x=a.find(z=>String(z.id)===String(id));if(x){Object.assign(x,o);S.set(c,a)}};
+const addOrg=(pub,priv)=>CLOUD?CLOUDAPI.addOrg(pub,priv):add('orgs',{...pub,priv});
+const getPriv=async id=>CLOUD?CLOUDAPI.getPriv(id):((S.get('orgs',[]).find(z=>String(z.id)===String(id))||{}).priv||null);
+const logout=()=>CLOUD?CLOUDAPI.logout():(S.set('user',null),go());
+const refresh=()=>{const t=document.activeElement&&document.activeElement.tagName;if(!/INPUT|TEXTAREA|SELECT/.test(t)&&!$('#mod'))go(true)};
+const hasNext=()=>{try{return !!sessionStorage.getItem('ga_next')}catch(e){return false}};
+const afterAuth=()=>{let n=null;try{n=sessionStorage.getItem('ga_next');sessionStorage.removeItem('ga_next')}catch(e){}if(n)location.hash=n;else go()};
+const needLogin=n=>{try{sessionStorage.setItem('ga_next',n)}catch(e){}location.hash='#akun'};
+document.addEventListener('click',e=>{const a=e.target.closest('[data-next]');if(a)try{sessionStorage.setItem('ga_next','#'+a.dataset.next)}catch(_){}});
 
-/* ============ ROUTER ============ */
+/* ===== DATA ===== */
+const PAGES=[['beranda','Beranda'],['greenmap','GreenMap'],['youth','Youth Action'],['greenfund','GreenFund'],['ecolearn','EcoLearn'],['organisasi','Organisasi'],['akun','Akun']];
+const TOOLS=[
+ ['greenmap','🗺️','GreenMap','Peta interaktif kondisi lingkungan di berbagai wilayah Indonesia, lengkap dengan fitur lapor masalah.'],
+ ['youth','🙌','Youth Action','Temukan platform dan kegiatan relawan lingkungan, lalu daftar langsung ke penyelenggaranya.'],
+ ['greenfund','🌱','GreenFund','Dukung program lingkungan dengan target, progres, dan laporan penggunaan dana yang jelas.'],
+ ['ecolearn','📚','EcoLearn','Artikel, panduan sampah, edukasi mitigasi bencana, dan tantangan mingguan.'],
+ ['akun','🏅','Akun & My Impact','Kelola akunmu dan lihat total kontribusi: laporan, relawan, donasi, dan tantangan.']];
+const TYPE={banjir:['Banjir','#1d6f8a'],longsor:['Longsor','#8a5a2b'],karhutla:['Karhutla','#c8483a'],pencemaran:['Pencemaran','#7a4aa0'],tpa:['TPA / TPST','#5b6b64'],banksampah:['Bank Sampah','#2d6a4f'],aksi:['Titik aksi relawan','#d99a1b']};
+const INAR=['BNPB InaRISK','https://inarisk.bnpb.go.id/'],SIPSN=['SIPSN KLHK','https://sipsn.menlhk.go.id/'];
+const SRC={banjir:INAR,longsor:INAR,karhutla:['SiPongi KLHK','https://sipongi.menlhk.go.id/'],pencemaran:['Kementerian Lingkungan Hidup','https://www.kemenlh.go.id/'],tpa:SIPSN,banksampah:SIPSN,aksi:SIPSN};
+const DEF={banjir:'Kawasan dengan risiko banjir tinggi pada peta risiko BNPB.',longsor:'Kawasan dengan risiko tanah longsor tinggi pada peta risiko BNPB.',karhutla:'Wilayah dengan titik panas berulang pada musim kemarau 2026.',pencemaran:'Kawasan dengan masalah pencemaran air atau sampah yang terdokumentasi.',tpa:'Tempat pemrosesan akhir sampah yang melayani kawasan sekitarnya.',banksampah:'Bank sampah induk tempat menabung sampah anorganik.',aksi:'Lokasi aksi relawan lingkungan yang pernah terdokumentasi.'};
+const MK=[
+['banjir','Kampung Melayu, Jakarta Timur',-6.2246,106.865,'Permukiman bantaran Ciliwung yang berulang tergenang saat debit naik.'],
+['banjir','Penjaringan, Jakarta Utara',-6.121,106.743,'Banjir rob dan penurunan muka tanah di pesisir utara Jakarta.'],
+['banjir','Pesisir Pekalongan',-6.88,109.67,'Rob dan banjir pesisir yang berkepanjangan.'],
+['banjir','Sayung, Demak',-6.89,110.52,'Abrasi dan rob menggenangi permukiman pesisir.'],
+['banjir','Dayeuhkolot, Kab. Bandung',-6.984,107.628,'Luapan Citarum saat hujan lebat.'],
+['banjir','Pondok Gede, Bekasi',-6.275,106.945],
+['banjir','Kota Medan',3.5952,98.6722],
+['banjir','Samarinda',-0.5022,117.1536],
+['banjir','Banjarmasin',-3.3194,114.5908],
+['banjir','Sentani, Jayapura',-2.57,140.52,'Pernah dilanda banjir bandang di kaki Pegunungan Cycloop.'],
+['banjir','Sintang, Kalimantan Barat',0.07,111.49],
+['banjir','Kota Makassar',-5.1477,119.4327],
+['longsor','Puncak, Bogor',-6.68,106.94],
+['longsor','Banjarnegara',-7.4,109.7],
+['longsor','Cugenang, Cianjur',-6.8,107.13],
+['longsor','Cimanggung, Sumedang',-6.89,107.97,'Lokasi longsor besar yang menimpa permukiman pada 2021.'],
+['longsor','Cisarua, Bandung Barat',-6.73,107.47],
+['longsor','Agam, Sumatera Barat',-0.25,100.2],
+['longsor','Tana Toraja',-3.05,119.85],
+['longsor','Sibolga dan Tapanuli Tengah',1.74,98.78],
+['longsor','Perbukitan Menoreh, Magelang',-7.6,110.2],
+['longsor','Sukorame, Ponorogo',-7.87,111.46,'Lokasi longsor besar pada 2017.'],
+['karhutla','Bengkalis, Riau',1.48,102.11,'Konsentrasi titik panas tertinggi di Riau pada April 2026.','https://mediaindonesia.com/humaniora/876220/310-titik-panas-ditemukan-bmkg-di-riau-bengkalis-jadi-zona-terparah'],
+['karhutla','Pelalawan, Riau',0.25,102,'Titik panas berkembang menjadi titik api pada 2026.','https://mediaindonesia.com/humaniora/876220/310-titik-panas-ditemukan-bmkg-di-riau-bengkalis-jadi-zona-terparah'],
+['karhutla','Dumai, Riau',1.67,101.45],
+['karhutla','Kubu Raya, Kalimantan Barat',-0.3,109.35,'Pemadaman api di lahan gambut pada Agustus 2026.','https://cnbcindonesia.com/news/20260830151052-4-763440/jumlah-titik-panas-karhutla-bertambah'],
+['karhutla','Kapuas, Kalimantan Tengah',-2.98,114.4,'Tercatat 1.065 titik panas hingga Juli 2026.','https://infopublik.id/kategori/bencana/983082/index.html'],
+['karhutla','Pulang Pisau, Kalimantan Tengah',-2.69,114.17],
+['karhutla','Banjarbaru, Kalimantan Selatan',-3.44,114.84,'Karhutla di sekitar Bandara Syamsudin Noor, Agustus 2026.','https://mongabay.co.id/2026/08/25/karhutla-kalsel-menyoal-penegakan-hukum-dorong-peradilan-lingkungan/'],
+['karhutla','Ogan Komering Ilir, Sumatera Selatan',-3.4,104.83],
+['karhutla','Muaro Jambi, Jambi',-1.59,103.6],
+['karhutla','Merauke, Papua Selatan',-8.49,140.4],
+['pencemaran','Hulu Citarum, Majalaya',-7.05,107.75],
+['pencemaran','Ciliwung, Manggarai',-6.21,106.85],
+['pencemaran','Teluk Jakarta, Muara Baru',-6.11,106.8],
+['pencemaran','Kali Surabaya',-7.35,112.7],
+['pencemaran','Pantai Kuta, Bali',-8.722,115.169,'Sampah kiriman laut rutin menumpuk saat musim angin barat.'],
+['pencemaran','Sungai Musi, Palembang',-2.976,104.771],
+['pencemaran','Danau Toba',2.65,98.85,'Pencemaran dari keramba jaring apung dan limbah permukiman.'],
+['tpa','TPST Bantargebang, Bekasi',-6.359,106.993,'Tujuan utama sampah DKI Jakarta.'],
+['tpa','TPA Suwung, Denpasar',-8.73,115.21],
+['tpa','TPA Piyungan, Bantul',-7.86,110.43,'Penutupan TPA memicu pengelolaan sampah berbasis rumah tangga.','https://tirto.id/cara-pengelolaan-sampah-rumah-tangga-setelah-tpa-piyungan-tutup-gNr3'],
+['tpa','TPA Sarimukti, Bandung Barat',-6.83,107.43],
+['tpa','TPA Benowo, Surabaya',-7.24,112.61],
+['tpa','TPA Antang, Makassar',-5.167,119.514],
+['tpa','TPA Bakung, Bandar Lampung',-5.48,105.24],
+['banksampah','Bank Sampah Induk Surabaya',-7.2753,112.7625,'Jl. Raya Menur No. 31A. Menerima setoran individu dan bank sampah unit.','https://www.detik.com/jatim/berita/d-6929783/sampah-bisa-ditukar-jadi-uang-di-surabaya-gimana-caranya'],
+['banksampah','Bank Sampah Gemah Ripah, Bantul',-7.916,110.335,'Berlokasi di Badegan, membina ratusan bank sampah unit.','https://finance.detik.com/energi/d-3440908/bank-sampah-pln-berhasil-jaring-53-000-nasabah'],
+['banksampah','Bank Sampah Induk Yogyakarta',-7.824,110.399,'Jl. Kemasan No. 22, Prenggan, Kotagede.'],
+['banksampah','Bank Sampah Malang',-7.98,112.63],
+['aksi','Pantai Marunda, Jakarta Utara',-6.097,106.957,'Aksi bersih pantai dan tanam mangrove.','https://ocs.com/id/?p=20222'],
+['aksi','TWA Angke Kapuk, Jakarta Utara',-6.1,106.74,'Penanaman bibit dan bersih sampah mangrove.','https://www.ipb.ac.id/?p=68040'],
+['aksi','Tongke-Tongke, Sinjai Timur',-5.14,120.27,'Penanaman 10.000 propagul mangrove bersama relawan.','https://wwf.id/en/blog/planted-10000-mangrove-seedlings-support-sustainable-gracilaria-cultivation'],
+['aksi','Pesawaran, Lampung',-5.68,105.22,'Penanaman 2.000 bibit mangrove dan bersih sungai.','https://www.licas.news/?p=208656'],
+['aksi','Krui, Pesisir Barat Lampung',-5.185,103.936,'Bersih sungai dan pantai rutin di muara Way Tuwok.','https://www.river-cleanup.org/en/project/world-cleanup-day-36/cleanup/krui-kecahko-1']
+].map(([t,n,lat,lng,i,u])=>({t,n,lat,lng,i,u}));
+const KATS=['Relawan umum','Bersih-bersih','Daur ulang','Advokasi','Edukasi','Konservasi'];
+const KI={'Relawan umum':'🤝','Bersih-bersih':'🧹','Daur ulang':'♻️','Advokasi':'📣','Edukasi':'📚','Konservasi':'🌳'};
+const WIKI='https://commons.wikimedia.org/wiki/Special:FilePath/';
+const PL=[
+{id:'indorelawan',n:'Indorelawan',kat:'Relawan umum',d:'Platform nasional yang mempertemukan relawan dengan ribuan organisasi dan kegiatan sosial, termasuk isu lingkungan.',u:'https://www.indorelawan.org/',sk:'Nasional · daring',c:'#2d6a4f'},
+{id:'sungaiwatch',n:'Sungai Watch',kat:'Bersih-bersih',d:'Gerakan mencegat sampah di sungai lewat barrier dan tim lapangan.',u:'https://sungai.watch/',sk:'Bali dan Jawa Timur',c:'#1d6f8a'},
+{id:'trashhero',n:'Trash Hero Indonesia',kat:'Bersih-bersih',d:'Komunitas relawan dengan aksi bersih rutin di pantai dan kota.',u:'https://trashhero.org/',sk:'Beberapa kota',c:'#2f8f6b'},
+{id:'dca',n:'Divers Clean Action',kat:'Bersih-bersih',d:'Penyelam relawan yang membersihkan sampah laut dan mengedukasi pelestarian terumbu karang.',u:'https://www.diverscleanaction.org/',sk:'Pesisir dan laut',c:'#1b4f72'},
+{id:'waste4change',n:'Waste4Change',kat:'Daur ulang',d:'Pengelolaan sampah dan edukasi pemilahan untuk rumah tangga dan bisnis.',u:'https://waste4change.com/',sk:'Beberapa kota',c:'#4d7c0f'},
+{id:'greeneration',n:'Greeneration Indonesia',kat:'Edukasi',d:'Kampanye diet kantong plastik dan gaya hidup minim sampah bersama jaringan relawan muda.',u:'https://greeneration.org/',sk:'Nasional',c:'#0f766e'},
+{id:'greenpeace',n:'Greenpeace Indonesia',kat:'Advokasi',d:'Kampanye isu hutan, energi, dan laut dengan dukungan relawan lokal.',u:'https://www.greenpeace.org/indonesia/',sk:'Nasional',c:'#3f6212'},
+{id:'walhi',n:'WALHI',kat:'Advokasi',d:'Forum organisasi lingkungan hidup dengan eksekutif daerah di banyak provinsi.',u:'https://www.walhi.or.id/',sk:'Eksekutif daerah',c:'#14532d'},
+{id:'pantaugambut',n:'Pantau Gambut',kat:'Advokasi',d:'Pemantauan gambut dan karhutla berbasis data dan partisipasi masyarakat.',u:'https://pantaugambut.id/',sk:'Sumatra dan Kalimantan',c:'#7c2d12'},
+{id:'wwf',n:'WWF-Indonesia',kat:'Konservasi',d:'Program konservasi laut, hutan, dan spesies, termasuk aksi tanam mangrove bersama relawan.',u:'https://www.wwf.id/',sk:'Nasional',c:'#166534',img:WIKI+'Mangrove_forest_reforestation.jpg?width=640'},
+{id:'econusa',n:'EcoNusa Foundation',kat:'Konservasi',d:'Pelestarian laut dan hutan Indonesia Timur serta kampanye #AksiMudaJagaIklim.',u:'https://econusa.id/',sk:'Papua dan Maluku',c:'#115e59',img:WIKI+'Creating_More_Resilient_Communities_Through_Forest_Conservation._(40088530744).jpg?width=640'},
+{id:'kehati',n:'Yayasan KEHATI',kat:'Konservasi',d:'Pelestarian keanekaragaman hayati dengan program kolaborasi bersama pemuda.',u:'https://www.kehati.or.id/',sk:'Nasional',c:'#365314'}];
+const FD=[
+{id:'f1',n:'Penanaman Mangrove Pesisir',pl:'wwf',t:25000000,c:0,keb:'Bibit, tenaga tanam, dan perawatan selama enam bulan.',rab:[['Bibit mangrove (2.000 batang)',8500000],['Upah penanam lokal',6500000],['Perawatan dan penyulaman',7000000],['Dokumentasi dan pelaporan',3000000]]},
+{id:'f2',n:'Fasilitas Pilah Sampah Desa',pl:'waste4change',t:40000000,c:0,keb:'Kontainer pilah, mesin pencacah, dan pelatihan warga.',rab:[['Kontainer pilah',12000000],['Mesin pencacah plastik',18000000],['Pelatihan warga',6000000],['Operasional awal',4000000]]},
+{id:'f3',n:'Barrier Sampah Sungai',pl:'sungaiwatch',t:30000000,c:0,keb:'Material, pemasangan, dan tim pengangkut sampah.',rab:[['Material barrier',14000000],['Pembuatan dan pemasangan',9000000],['Tim pengangkut',5000000],['Pelaporan',2000000]]},
+{id:'f4',n:'Pemulihan Ruang Hijau Kota',pl:'greeneration',t:15000000,c:0,keb:'Pohon peneduh, tempat sampah terpilah, dan perawatan.',rab:[['Bibit pohon peneduh',6000000],['Tempat sampah terpilah',5000000],['Perawatan tiga bulan',4000000]]},
+{id:'f5',n:'Edukasi Pencegahan Karhutla',pl:'pantaugambut',t:20000000,c:0,keb:'Pelatihan masyarakat peduli api dan materi edukasi.',rab:[['Pelatihan masyarakat',9000000],['Materi dan peralatan',7000000],['Pendampingan lapangan',4000000]]}];
+const ART=[
+['Bencana','Musim hujan November 2026: BNPB ingatkan ancaman banjir dan longsor','Harian Jogja','https://news.harianjogja.com/r-1277356/musim-hujan-november-2026-bnpb-ingatkan-ancaman-banjir-dan-longsor'],
+['Bencana','BNPB ingatkan daerah siaga El Nino, mitigasi harus jadi prioritas','RRI','https://rri.co.id/mataram/nasional/2598015/bnpb-ingatkan-daerah-siaga-el-nino-mitigasi-harus-jadi-prioritas'],
+['Bencana','Menuju masyarakat tangguh bencana','ITS News','https://www.its.ac.id/news/menuju-masyarakat-tangguh-bencana/'],
+['Bencana','BNPB: mitigasi nonstruktural lebih penting untuk hadapi La Nina','Bisnis.com','https://kabar24.bisnis.com/read/20201021/15/1307836/bnpb-mitigasi-nonstruktural-lebih-penting-untuk-hadapai-la-nina'],
+['Karhutla','Mengapa lahan gambut mudah terbakar dan sulit dipadamkan?','Antara','https://www.antaranews.com/berita/5709191/mengapa-lahan-gambut-mudah-terbakar-dan-sulit-dipadamkan'],
+['Karhutla','Karhutla Kalsel: menyoal penegakan hukum, dorong peradilan lingkungan','Mongabay Indonesia','https://mongabay.co.id/2026/08/25/karhutla-kalsel-menyoal-penegakan-hukum-dorong-peradilan-lingkungan/'],
+['Karhutla','Riau hingga Kalimantan Selatan berisiko karhutla pada kemarau 2026','NU Online','https://nu.or.id/nasional/riau-hingga-kalimantan-selatan-berisiko-karhutla-pada-kemarau-2026-aBE3I'],
+['Karhutla','Prabowo bentuk badan gambut dan mangrove perkuat pencegahan karhutla','Antara','https://www.antaranews.com/berita/5758051/prabowo-bentuk-badan-gambut-dan-mangrove-perkuat-pencegahan-karhutla'],
+['Karhutla','Titik panas 2026 naik tiga kali lipat dibanding tahun lalu','Metro TV','https://www.metrotvnews.com/read/b2lC64eP-titik-panas-2026-naik-3-kali-lipat-dibanding-tahun-lalu'],
+['Karhutla','Karhutla 2026 meluas: sudahkah pencegahan kita berhasil?','Good News from Indonesia','https://www.goodnewsfromindonesia.id/indonesiana/opini/karhutla-2026-evaluasi-pencegahan-kebakaran-hutan'],
+['Sampah','Cara jadikan sampah jadi uang, bukan lagi sumber masalah','detikJabar','https://www.detik.com/jabar/berita/d-8262230/cara-jadikan-sampah-jadi-uang-bukan-lagi-sumber-masalah'],
+['Sampah','Mengenal jenis sampah dan cara memilahnya dari rumah','Metro TV','https://www.metrotvnews.com/read/NOlC9joQ-mengenal-jenis-sampah-dan-cara-memilahnya-dari-rumah'],
+['Sampah','225 ribu rumah di Jakarta sudah terapkan pilah sampah','Antara','https://www.antaranews.com/berita/5660447/225-ribu-rumah-di-jakarta-sudah-terapkan-pilah-sampah'],
+['Sampah','Cara pengelolaan sampah rumah tangga setelah TPA Piyungan tutup','Tirto','https://tirto.id/cara-pengelolaan-sampah-rumah-tangga-setelah-tpa-piyungan-tutup-gNr3'],
+['Sampah','Sampah bisa ditukar jadi uang di Surabaya, gimana caranya?','detikJatim','https://www.detik.com/jatim/berita/d-6929783/sampah-bisa-ditukar-jadi-uang-di-surabaya-gimana-caranya'],
+['Sampah','10 tempat pembuangan limbah B3 rumah tangga di Bandung','detikJabar','https://www.detik.com/jabar/berita/d-6720810/simak-ini-10-tempat-pembuangan-limbah-b3-rumah-tangga-di-bandung'],
+['Mangrove','Planted 10,000 mangrove seedlings to support sustainable Gracilaria cultivation','WWF-Indonesia','https://wwf.id/en/blog/planted-10000-mangrove-seedlings-support-sustainable-gracilaria-cultivation'],
+['Mangrove','In photos: interfaith volunteers plant 2,000 mangroves in Indonesia','LiCAS News','https://www.licas.news/?p=208656']];
+const PILAH=[['Organik','Sisa makanan dan daun. Olah jadi kompos.','#52b788',ART[11][3]],['Anorganik','Plastik, kaleng, kertas bersih. Setor ke bank sampah.','#1d6f8a',ART[10][3]],['B3','Baterai, lampu, obat kedaluwarsa. Bawa ke tempat penampungan khusus.','#c8483a',ART[15][3]],['Residu','Sisa yang tidak bisa didaur ulang. Bungkus rapi sebelum dibuang.','#5b6b64',ART[12][3]]];
+const MITIGASI=[['Banjir dan longsor','Pantau info BNPB dan BMKG, siapkan tas siaga, jauhi lereng saat hujan lebat.',ART[0][3]],['Kesiapsiagaan keluarga','Kenali risiko di sekitarmu dan siapkan perlengkapan dasar untuk seluruh keluarga.',ART[2][3]],['Kebakaran hutan dan lahan','Jangan membakar lahan atau sampah. Pahami mengapa gambut sulit dipadamkan.',ART[4][3]]];
+const CHALLENGE=[['Bawa tumbler dan tas belanja sendiri selama seminggu',10],['Pilah sampah rumah jadi organik dan anorganik',15],['Matikan lampu dan alat elektronik yang tidak dipakai',10],['Ajak 1 teman ikut kegiatan relawan',20]];
+const WEEK=new Date().toISOString().slice(0,8)+'W'+Math.ceil(new Date().getDate()/7);
+const ORGS=[];
+const allOrgs=()=>[...ORGS,...S.get('orgs',[])];
+const allEvents=()=>S.get('orgevents',[]);
+const impact=()=>{const u=me(),r=S.get('reports',[]).filter(x=>x.owner===u).length,v=S.get('regs',[]).length,d=S.get('dons',[]).reduce((a,b)=>a+b.amt,0),c=(S.get('chal',{})[WEEK]||[]).length;return{r,v,d,c,pts:r*20+v*30+Math.floor(d/10000)+c*10}};
+
 let map=null;
 const RM=matchMedia('(prefers-reduced-motion:reduce)').matches;
 const io=new IntersectionObserver(es=>es.forEach(x=>{if(x.isIntersecting){x.target.classList.add('in');setTimeout(()=>x.target.classList.add('done'),1000);io.unobserve(x.target)}}),{threshold:.12});
@@ -168,8 +266,10 @@ function fx(keep){if(RM)return;
 const posPill=()=>{const a=document.querySelector('#nav .on'),p=$('#pill');if(!a||!p)return;p.style.transform=`translate(${a.offsetLeft}px,${a.offsetTop}px)`;p.style.width=a.offsetWidth+'px';p.style.height=a.offsetHeight+'px'};
 window.addEventListener('resize',posPill);if(document.fonts)document.fonts.ready.then(posPill);
 window.addEventListener('scroll',()=>{const h=document.documentElement;$('#sp').style.transform=`scaleX(${h.scrollTop/((h.scrollHeight-h.clientHeight)||1)})`},{passive:true});
+
 function go(keep){
- const p=(location.hash||'#beranda').slice(1);
+ closeMod();
+ let p=(location.hash||'#beranda').slice(1);if(p==='myimpact')p='akun';
  const page=PAGES.find(x=>x[0]===p)?p:'beranda';
  const nv=$('#nav');if(!nv.children.length)nv.innerHTML='<i id="pill"></i>'+PAGES.map(x=>`<a href="#${x[0]}">${x[1]}</a>`).join('');
  nv.querySelectorAll('a').forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+page));posPill();
@@ -181,117 +281,173 @@ function go(keep){
 }
 window.addEventListener('hashchange',()=>{if(RM||!$('#app').animate)return go();const a=$('#app').animate([{opacity:1,transform:'none'},{opacity:0,transform:'translateY(-10px)'}],{duration:160,fill:'forwards'});a.onfinish=()=>{a.cancel();go()}});
 
-/* ============ VIEWS ============ */
+function mod(html){closeMod();const d=document.createElement('div');d.id='mod';d.className='mod';d.innerHTML=`<div class="mb" role="dialog" aria-modal="true"><button class="x" aria-label="Tutup">×</button>${html}</div>`;d.onclick=e=>{if(e.target===d||e.target.classList.contains('x'))closeMod()};document.body.appendChild(d);return d}
+function closeMod(){const d=$('#mod');if(d)d.remove()}
+const lockCard=(t,p,n)=>`<div class="card lock"><b>${t}</b><p>${p}</p><a class="btn" href="#akun" data-next="${n}">Masuk atau daftar</a></div>`;
+
+function regModal(id){const u=S.get('user',null);if(!u)return needLogin('#youth');
+ const p=PL.find(x=>x.id===id)||allEvents().find(x=>String(x.id)===id);if(!p)return;
+ const d=mod(`<h3>Daftar relawan</h3><p><b>${esc(p.n)}</b></p><ol class="steps"><li class="done">Akun GreenAksi aktif<br><small>${esc(u.email)}</small></li>
+ <li>Daftar di ${p.link?'formulir pendaftaran kegiatan':'situs resmi platform'}.<br>${A(p.u||p.link,'Buka pendaftaran ↗','btn sm')}${p.panduan?' '+A(p.panduan,'Guidebook ↗','btn sm alt'):''}</li>
+ <li>Setelah selesai mendaftar, konfirmasi di sini.<label class="check"><input type="checkbox" id="cf"><span>Saya sudah mendaftar di platform tersebut</span></label><button class="btn alt sm" id="cok" disabled>Simpan ke akun saya</button></li></ol>`);
+ const cf=d.querySelector('#cf'),ok=d.querySelector('#cok');cf.onchange=()=>ok.disabled=!cf.checked;
+ ok.onclick=()=>{const r=S.get('regs',[]).map(String);if(!r.includes(id)){r.push(id);S.set('regs',r)}closeMod();go(true)}}
+
+function donModal(id){const u=S.get('user',null);if(!u)return needLogin('#greenfund');
+ const f=FD.find(x=>x.id===id);let amt=50000;const noms=[10000,25000,50000,100000,250000];
+ const d=mod(`<h3>Donasi</h3><p><b>${esc(f.n)}</b></p><ol class="steps"><li class="done">Akun GreenAksi aktif<br><small>${esc(u.email)}</small></li>
+ <li>Pilih nominal, lalu bayar lewat QRIS${CFG.rekening?' atau transfer ke '+esc(CFG.rekening):''}.<div class="chips" id="nom" style="margin-top:.5rem">${noms.map(n=>`<button class="chip ${n===amt?'on':''}" data-n="${n}">${rp(n)}</button>`).join('')}</div>
+ <img src="${esc(f.qris||CFG.qris)}" alt="QRIS donasi ${esc(f.n)}" onerror="this.replaceWith(Object.assign(document.createElement('p'),{textContent:'QRIS untuk program ini belum tersedia.'}))"></li>
+ <li>Unggah bukti transaksi.<br>${CFG.gformBukti?A(CFG.gformBukti,'Isi formulir bukti ↗','btn sm'):'Kirim bukti ke '+esc(CFG.kontak||'admin GreenAksi')+'.'}</li>
+ <li>Konfirmasi setelah bukti terkirim.<label class="check"><input type="checkbox" id="cf"><span>Saya sudah transfer dan mengirim bukti</span></label><button class="btn alt sm" id="cok" disabled>Catat donasi saya</button></li></ol>`);
+ d.querySelector('#nom').onclick=e=>{const n=+e.target.dataset.n;if(!n)return;amt=n;d.querySelectorAll('#nom .chip').forEach(c=>c.classList.toggle('on',+c.dataset.n===n))};
+ const cf=d.querySelector('#cf'),ok=d.querySelector('#cok');cf.onchange=()=>ok.disabled=!cf.checked;
+ ok.onclick=()=>{const x=S.get('dons',[]);x.push({id,amt,at:Date.now()});S.set('dons',x);closeMod();go(true)}}
+
+/* ===== TAMPILAN ===== */
+const pop=m=>{const s=m.u?['Sumber berita',m.u]:SRC[m.t];return`<b>${esc(m.n)}</b><br><i>${TYPE[m.t][0]}</i><br>${esc(m.i||DEF[m.t]||'')}<br>${m.owner?'Laporan warga GreenAksi':`<a href="${esc(s[1])}" target="_blank" rel="noopener">Sumber: ${s[0]} ↗</a>`}`};
 const VIEWS={
 beranda(){const i=impact();return`
- <section class="hero"><i class="lf" style="left:62%;top:14%">🍃</i><i class="lf" style="left:80%;top:52%;animation-delay:-2.5s">🌿</i><i class="lf" style="left:90%;top:12%;animation-delay:-5s">🍃</i><h1>${'Satu aksi kecil, dampak untuk Indonesia.'.split(' ').map((w,i)=>`<span class="w" style="--i:${i}">${w}</span>`).join(' ')}</h1>
- <p>GreenAksi mempertemukan peta kondisi lingkungan, kegiatan relawan, donasi transparan, dan edukasi dalam satu platform untuk generasi muda.</p>
+ <section class="hero"><i class="lf" style="left:62%;top:14%">🍃</i><i class="lf" style="left:80%;top:52%;animation-delay:-2.5s">🌿</i><i class="lf" style="left:90%;top:12%;animation-delay:-5s">🍃</i>
+ <h1>${'Satu aksi kecil, dampak untuk Indonesia.'.split(' ').map((w,k)=>`<span class="w" style="--i:${k}">${w}</span>`).join(' ')}</h1>
+ <p>GreenAksi menyatukan peta kondisi lingkungan, kegiatan relawan, donasi transparan, dan edukasi untuk generasi muda.</p>
  <a class="btn" href="#greenmap">Buka GreenMap</a> <a class="btn alt" href="#youth">Cari kegiatan</a></section>
  <h2>Pilih alat yang kamu butuhkan</h2><p class="sub">Lima fitur yang saling terhubung: lihat masalah, bergerak, mendanai, belajar, lalu pantau dampakmu.</p>
  <div class="grid">${TOOLS.map(t=>`<a class="card tool" href="#${t[0]}"><div class="ico">${t[1]}</div><b>${t[2]}</b><p>${t[3]}</p></a>`).join('')}</div>
- <div class="stats"><div><strong>${MARKERS.length+S.get('reports',[]).length}</strong>titik di peta</div><div><strong>${EVENTS.length}</strong>kegiatan terbuka</div><div><strong>${i.pts}</strong>poin dampakmu</div></div>`},
+ <div class="stats"><div><strong>${MK.length+S.get('reports',[]).length}</strong>titik di peta</div><div><strong>${PL.length+allEvents().length}</strong>pilihan relawan</div><div><strong>${FD.length}</strong>program donasi</div><div><strong>${i.pts}</strong>poin dampakmu</div></div>`},
 
-greenmap(){return`<h2>GreenMap</h2><p class="sub">Lihat kondisi lingkungan di berbagai wilayah. Klik peta untuk memilih lokasi laporan.</p>
+greenmap(){const u=S.get('user',null);return`<h2>GreenMap</h2><p class="sub">Kawasan rawan bencana, titik panas karhutla, pencemaran, fasilitas sampah, dan titik aksi relawan. Klik penanda untuk detail dan sumbernya. Penanda menunjukkan kawasan atau lokasi berulang, bukan kondisi waktu nyata.</p>
  <div class="chips" id="chips"></div><div id="map"></div>
- <div class="card"><h2 style="font-size:1.2rem">Laporkan masalah lingkungan</h2>
- <form id="rf"><div class="two"><div><label for="rt">Jenis</label><select id="rt">${Object.keys(TYPE).filter(k=>!['banksampah','komunitas'].includes(k)).map(k=>`<option value="${k}">${TYPE[k][0]}</option>`).join('')}</select></div>
- <div><label for="rn">Nama lokasi</label><input id="rn" required placeholder="mis. Sungai di dekat pasar"></div></div>
+ ${u?`<div class="card"><h2 style="font-size:1.2rem">Laporkan masalah lingkungan</h2>
+ <form id="rf"><div class="two"><div><label for="rt">Jenis</label><select id="rt">${['banjir','longsor','karhutla','pencemaran'].map(k=>`<option value="${k}">${TYPE[k][0]}</option>`).join('')}</select></div>
+ <div><label for="rn">Nama lokasi</label><input id="rn" required placeholder="mis. Sungai dekat pasar"></div></div>
  <label for="rd">Deskripsi</label><textarea id="rd" rows="3" required></textarea>
- <p id="coord" class="sub" style="margin:0">Lokasi: klik peta untuk memilih titik.</p>
- <button class="btn alt" type="submit">Kirim laporan</button></form><div id="rmsg"></div></div>`},
+ <p id="coord" class="sub" style="margin:0">Klik peta untuk memilih titik lokasi.</p>
+ <button class="btn alt" type="submit">Kirim laporan</button></form><div id="rmsg"></div></div>`
+ :lockCard('Ingin melaporkan masalah lingkungan?','Masuk atau daftar akun terlebih dahulu agar laporanmu tercatat dan masuk ke dampakmu.','greenmap')}
+ <h2 style="font-size:1.2rem;margin-top:2rem">Sumber data</h2><div class="chips">${[INAR,SRC.karhutla,SIPSN,SRC.pencemaran].map(s=>A(s[1],s[0]+' ↗','chip')).join('')}</div>`},
 
-youth(){const regs=S.get('regs',[]);return`<h2>Youth Action</h2><p class="sub">Daftar kegiatan sukarelawan, cek jadwal dan lokasi, lalu bergabung.</p>
- <div class="grid">${allEvents().map(e=>`<div class="card"><span class="tag">${e.k}</span>${e.by?` <span class="tag">✓ ${esc(e.by)}</span>`:''}<b style="display:block;margin:.4rem 0">${esc(e.n)}</b>
- <p style="font-size:.9rem">📅 ${e.tgl}<br>📍 ${esc(e.lok)}<br>👥 Kuota ${e.q} orang</p>
- ${regs.map(String).includes(String(e.id))?'<p class="ok">Kamu sudah terdaftar ✓</p>':`<button class="btn alt sm" style="margin-top:.6rem" data-reg="${e.id}">Daftar relawan</button>`}</div>`).join('')}</div>
- <div id="regform"></div>
- <h2 style="margin-top:2rem">Dokumentasi kegiatan</h2><p class="sub">Ganti kotak warna ini dengan foto asli kegiatan.</p>
- <div class="grid">${DOCS.map(d=>`<div><div class="photo" style="background:${d[1]}">📷</div><p style="font-size:.9rem;margin-top:.3rem">${d[0]}</p></div>`).join('')}</div>`},
+youth(){const regs=S.get('regs',[]).map(String);
+ const card=(p,ev)=>`<article class="card pl" data-k="${esc(p.kat||p.k)}"><div class="ph" style="--c:${p.c||'#2d6a4f'}"><span>${KI[p.kat||p.k]||'🌿'}</span>${(p.img||p.foto||!ev)?`<img src="${esc(p.img||p.foto||'foto/'+p.id+'.jpg')}" alt="" loading="lazy" onerror="this.remove()">`:''}</div>
+ <div class="pb"><span class="tag">${esc(p.kat||p.k)}</span>${ev?` <span class="tag">✓ ${esc(p.by)}</span>`:''}<b style="display:block;margin:.4rem 0 .2rem">${esc(p.n)}</b>
+ <p>${ev?`📅 ${esc(p.tgl)}<br>📍 ${esc(p.lok)}`:esc(p.d)}</p>${ev?'':`<small>${esc(p.sk)}</small>`}
+ ${regs.includes(String(p.id))?'<p class="ok">Kamu sudah terdaftar ✓</p>':`<button class="btn alt sm" data-reg="${esc(p.id)}">Daftar relawan</button>`}</div></article>`;
+ const evs=allEvents();
+ return`<h2>Youth Action</h2><p class="sub">Pilih platform atau kegiatan, daftar akun GreenAksi, lalu selesaikan pendaftaran di formulir atau situs resmi penyelenggara.</p>
+ <div class="chips" id="kf">${['Semua',...KATS].map((k,i)=>`<button class="chip ${i?'':'on'}" data-kf="${k}">${k}</button>`).join('')}</div>
+ ${evs.length?`<h2 style="font-size:1.2rem">Kegiatan dari organisasi terverifikasi</h2><div class="grid">${evs.map(e=>card(e,1)).join('')}</div><h2 style="font-size:1.2rem;margin-top:1.8rem">Platform relawan</h2>`:''}
+ <div class="grid" id="pg">${PL.map(p=>card(p)).join('')}</div>`},
 
-greenfund(){const dons=S.get('dons',[]);return`<h2>GreenFund</h2><p class="sub">Pilih program, lihat progres, dan baca laporan penggunaan dananya. Donasi di prototipe ini hanya simulasi.</p>
- <div class="grid">${FUNDS.map(f=>{const c=f.c+dons.filter(d=>d.id===f.id).reduce((a,b)=>a+b.amt,0),p=Math.min(100,Math.round(c/f.t*100));
- return`<div class="card"><b>${f.n}</b><div class="bar"><i style="width:${p}%"></i></div>
- <p style="font-size:.9rem"><b>${rp(c)}</b> dari ${rp(f.t)} (${p}%)</p><p style="font-size:.85rem;color:#4a6558;margin:.4rem 0">Kebutuhan: ${f.keb}</p>
- <div style="display:flex;gap:.4rem;flex-wrap:wrap">${[10000,50000,100000].map(a=>`<button class="btn alt sm" data-don="${f.id}|${a}">${rp(a)}</button>`).join('')}</div></div>`}).join('')}</div>
- <div id="dmsg"></div>
- <h2 style="margin-top:2rem">Laporan penggunaan dana</h2><div class="card"><table><tr><th>Pos</th><th>Jumlah</th></tr>${LAPORAN.map(l=>`<tr><td>${l[0]}</td><td>${rp(l[1])}</td></tr>`).join('')}</table></div>`},
+greenfund(){return`<h2>GreenFund</h2><p class="sub">Setiap program terhubung dengan platform relawan pelaksananya. Donasi memerlukan akun, dan bukti transaksi dikirim lewat formulir.</p>
+ <div class="grid">${FD.map(f=>{const p=PL.find(x=>x.id===f.pl),pc=Math.min(100,Math.round(f.c/f.t*100)),tot=f.rab.reduce((a,b)=>a+b[1],0);
+ return`<div class="card"><span class="tag">${KI[p.kat]} ${esc(p.n)}</span><b style="display:block;margin:.5rem 0 .2rem">${esc(f.n)}</b>
+ <div class="bar"><i style="width:${pc}%"></i></div><p style="font-size:.9rem"><b>${rp(f.c)}</b> dari ${rp(f.t)} (${pc}%)</p>
+ <p style="font-size:.85rem;color:#4a6558;margin:.4rem 0">Kebutuhan: ${esc(f.keb)}</p>
+ <details><summary>Laporan penggunaan dana</summary><table><tr><th>Pos</th><th>Rencana</th><th>Realisasi</th></tr>${f.rab.map((r,k)=>`<tr><td>${esc(r[0])}</td><td>${rp(r[1])}</td><td>${rp((f.real||[])[k]||0)}</td></tr>`).join('')}<tr><th>Total</th><th>${rp(tot)}</th><th>${rp((f.real||[]).reduce((a,b)=>a+b,0))}</th></tr></table></details>
+ <button class="btn sm" style="margin-top:.8rem" data-don="${f.id}">Donasi</button></div>`}).join('')}</div>`},
 
-ecolearn(){const done=S.get('chal',{})[WEEK]||[];return`<h2>EcoLearn</h2><p class="sub">Belajar singkat, lalu praktikkan lewat tantangan mingguan.</p>
- <h2 style="font-size:1.2rem">Artikel & infografis</h2><div class="grid">${ARTIKEL.map(a=>`<div class="card"><b>${a[0]}</b><p style="font-size:.9rem;color:#4a6558;margin-top:.3rem">${a[1]}</p></div>`).join('')}</div>
- <h2 style="font-size:1.2rem;margin-top:1.6rem">Panduan pengelolaan sampah</h2><div class="grid">${PILAH.map(p=>`<div class="card" style="border-left:6px solid ${p[2]}"><b>${p[0]}</b><p style="font-size:.9rem">${p[1]}</p></div>`).join('')}</div>
- <h2 style="font-size:1.2rem;margin-top:1.6rem">Mitigasi bencana</h2><div class="grid">${MITIGASI.map(p=>`<div class="card"><b>${p[0]}</b><p style="font-size:.9rem">${p[1]}</p></div>`).join('')}</div>
+ecolearn(){const done=S.get('chal',{})[WEEK]||[];const AK=['Semua','Sampah','Bencana','Karhutla','Mangrove'];
+ const lk=(a)=>`<a class="card art" href="${esc(a[3])}" target="_blank" rel="noopener" data-a="${a[0]}"><small>${esc(a[2])} · ${a[0]} ↗</small><br><b>${esc(a[1])}</b></a>`;
+ return`<h2>EcoLearn</h2><p class="sub">Semua materi terhubung ke artikel sumbernya. Klik kartu untuk membaca di situs penerbit.</p>
+ <h2 style="font-size:1.2rem">Panduan pengelolaan sampah</h2><div class="grid">${PILAH.map(p=>`<a class="card art" style="border-left:6px solid ${p[2]}" href="${esc(p[3])}" target="_blank" rel="noopener"><b>${p[0]} ↗</b><p style="font-size:.9rem">${p[1]}</p></a>`).join('')}</div>
+ <h2 style="font-size:1.2rem;margin-top:1.6rem">Edukasi mitigasi bencana</h2><div class="grid">${MITIGASI.map(p=>`<a class="card art" href="${esc(p[2])}" target="_blank" rel="noopener"><b>${p[0]} ↗</b><p style="font-size:.9rem">${p[1]}</p></a>`).join('')}</div>
+ <h2 style="font-size:1.2rem;margin-top:1.6rem">Artikel pilihan</h2><div class="chips" id="af">${AK.map((k,i)=>`<button class="chip ${i?'':'on'}" data-af="${k}">${k}</button>`).join('')}</div><div class="grid" id="ag">${ART.map(lk).join('')}</div>
  <h2 style="font-size:1.2rem;margin-top:1.6rem">Weekly Eco-Challenge</h2><div class="card">${CHALLENGE.map((c,i)=>`<label class="check"><input type="checkbox" data-ch="${i}" ${done.includes(i)?'checked':''}><span>${c[0]} <span class="tag">+${c[1]} poin</span></span></label>`).join('')}</div>`},
 
-myimpact(){const i=impact(),lv=i.pts>=300?'Penjaga Bumi':i.pts>=150?'Penggerak':i.pts>=50?'Pelopor':'Pemula';
- const B=[['🗺️','Pelapor',i.r>=1],['🙌','Relawan',i.v>=1],['🌱','Donatur',i.d>0],['📚','Pembelajar',i.c>=2]];
- return`<h2>My Impact</h2><p class="sub">Ringkasan kontribusimu. Poin dihitung otomatis dari aktivitas di empat fitur lainnya.</p>
- <div class="card"><div class="lvl">${i.pts} poin</div><b>Level: ${lv}</b>
- <div class="bar"><i style="width:${Math.min(100,i.pts/300*100)}%"></i></div><p style="font-size:.85rem;color:#4a6558">Target 300 poin menuju Penjaga Bumi</p></div>
- <div class="stats"><div><strong>${i.r}</strong>laporan dikirim</div><div><strong>${i.v}</strong>kegiatan diikuti</div><div><strong>${rp(i.d)}</strong>donasi</div><div><strong>${i.c}</strong>tantangan minggu ini</div></div>
- <h2 style="font-size:1.2rem">Lencana</h2><div class="grid">${B.map(b=>`<div class="card badge ${b[2]?'got':''}"><div class="ico">${b[0]}</div><b>${b[1]}</b></div>`).join('')}</div>
- <p style="margin-top:1.5rem"><button class="btn sm" id="reset" style="background:var(--mist)">Hapus data saya</button></p>`},
-akun(){const u=S.get('user',null);
- if(u)return`<h2>Akun saya</h2><div class="card"><b>${esc(u.nama)}</b><p>${esc(u.email)}</p><span class="tag">${u.role==='admin'?'Admin':'Anggota'}</span><p style="margin-top:.8rem"><button class="btn sm alt" id="out">Keluar</button></p></div><p class="sub" style="margin-top:1rem">Punya organisasi? Ajukan verifikasi di halaman <a href="#organisasi">Organisasi</a>.</p>`;
- return`<h2>Masuk atau daftar</h2><p class="sub">Akun diperlukan untuk mendaftar kegiatan relawan dan mengajukan organisasi.</p>
- <div class="two"><div class="card"><b>Daftar akun baru</b><form id="fd"><label for="dn">Nama</label><input id="dn" required><label for="de">Email</label><input id="de" type="email" required><label for="dp">Kata sandi (min. 6 karakter)</label><input id="dp" type="password" required><button class="btn alt" type="submit">Daftar</button></form><p id="dm" style="color:var(--red);font-size:.9rem"></p></div>
- <div class="card"><b>Sudah punya akun</b><form id="fl"><label for="le">Email</label><input id="le" type="email" required><label for="lp">Kata sandi</label><input id="lp" type="password" required><button class="btn alt" type="submit">Masuk</button></form><p id="lm" style="color:var(--red);font-size:.9rem"></p>${CLOUD?'':'<p style="font-size:.8rem;color:#4a6558">Akun admin contoh: admin@greenaksi.id / admin123</p>'}</div></div>`},
 organisasi(){const u=S.get('user',null),all=allOrgs(),ver=all.filter(o=>o.v===1),mine=u?all.filter(o=>o.owner===u.email):[],myv=mine.filter(o=>o.v===1),pend=all.filter(o=>o.v===0);
- return`<h2>Organisasi terverifikasi</h2><p class="sub">Hanya organisasi yang sudah diverifikasi admin yang dapat memasang kegiatan relawan di Youth Action.</p>
- <div class="grid">${ver.map(o=>`<div class="card"><span class="tag">✓ Terverifikasi</span><b style="display:block;margin:.4rem 0">${esc(o.n)}</b><p style="font-size:.9rem">📍 ${esc(o.kota)}</p></div>`).join('')}</div>
- ${!u?'<p class="ok">Masuk di halaman <a href="#akun">Akun</a> untuk mengajukan organisasi.</p>':`
- <div class="two" style="margin-top:1.5rem"><div class="card"><b>Ajukan organisasi</b><form id="fo"><label for="on">Nama organisasi</label><input id="on" required><label for="ok">Kota</label><input id="ok" required><label for="ol">Tautan bukti (legalitas, Instagram, atau website)</label><input id="ol" required><button class="btn alt" type="submit">Ajukan verifikasi</button></form></div>
- <div class="card"><b>Pengajuan saya</b>${mine.length?`<table>${mine.map(o=>`<tr><td>${esc(o.n)}</td><td>${o.v===1?'✓ Terverifikasi':o.v===0?'Menunggu':'Ditolak'}</td></tr>`).join('')}</table>`:'<p class="sub">Belum ada pengajuan.</p>'}</div></div>
- ${myv.length?`<div class="card" style="margin-top:1rem"><b>Pasang kegiatan relawan</b><form id="fe"><label for="eo">Organisasi</label><select id="eo">${myv.map(o=>`<option>${esc(o.n)}</option>`).join('')}</select><label for="en">Nama kegiatan</label><input id="en" required><div class="two"><div><label for="et">Waktu</label><input id="et" type="datetime-local" required></div><div><label for="eq">Kuota</label><input id="eq" type="number" min="1" value="30" required></div></div><label for="el">Lokasi</label><input id="el" required><label for="ek">Kategori</label><select id="ek"><option>Bersih-bersih</option><option>Penanaman pohon</option><option>Edukasi</option><option>Kampanye</option></select><button class="btn alt" type="submit">Terbitkan di Youth Action</button></form></div>`:''}
- ${u.role==='admin'?`<div class="card" style="margin-top:1rem"><b>Antrean verifikasi (admin)</b>${pend.length?`<table>${pend.map(o=>`<tr><td>${esc(o.n)}<br><small>${esc(o.kota)} · ${esc(o.link)}</small></td><td><button class="btn sm alt" data-vf="${o.id}|1">Verifikasi</button> <button class="btn sm" style="background:var(--mist)" data-vf="${o.id}|2">Tolak</button></td></tr>`).join('')}</table>`:'<p class="sub">Tidak ada antrean.</p>'}</div>`:''}`}`}
+ const fl=(id,l,t='text',x='required')=>`<div><label for="${id}">${l}</label><input id="${id}" type="${t}" ${x}></div>`;
+ const sl=(id,l,a)=>`<div><label for="${id}">${l}</label><select id="${id}">${a.map(v=>`<option>${v}</option>`).join('')}</select></div>`;
+ const st=k=>k===1?'✓ Terverifikasi':k===0?'Menunggu tinjauan':'Ditolak';
+ return`<h2>Organisasi terverifikasi</h2><p class="sub">Hanya organisasi yang lolos verifikasi admin yang dapat menerbitkan kegiatan relawan di Youth Action.</p>
+ ${ver.length?`<div class="grid">${ver.map(o=>`<div class="card"><span class="tag">✓ Terverifikasi</span><b style="display:block;margin:.4rem 0">${esc(o.n)}</b><p style="font-size:.9rem">📍 ${esc(o.kota)}${o.prov?', '+esc(o.prov):''}<br>${esc(o.fokus||'')}</p></div>`).join('')}</div>`:'<p class="sub">Belum ada organisasi terverifikasi. Ajukan organisasimu di bawah ini.</p>'}
+ <h2 style="margin-top:2rem">Verifikasi organisasi</h2>
+ <div class="grid"><div class="card"><b>1. Ajukan</b><p class="sub" style="margin:0">Lengkapi data organisasi, legalitas, dan penanggung jawab.</p></div><div class="card"><b>2. Ditinjau admin</b><p class="sub" style="margin:0">Admin memeriksa berkas dan kehadiran daring organisasi.</p></div><div class="card"><b>3. Terverifikasi</b><p class="sub" style="margin:0">Kamu dapat menerbitkan kegiatan relawan di Youth Action.</p></div></div>
+ <div class="card" style="margin-top:1rem"><b>Syarat yang perlu disiapkan</b><ul style="margin:.5rem 0 0 1.2rem;font-size:.92rem"><li>Dokumen legalitas atau surat keterangan dari desa/kelurahan</li><li>Penanggung jawab dengan kontak aktif (WhatsApp dan email)</li><li>Website atau Instagram yang menampilkan kegiatan lingkungan</li><li>Berkas bukti dalam satu tautan Google Drive yang dapat diakses admin</li></ul>
+ ${CFG.gformVerif?`<p style="margin-top:.8rem">${A(CFG.gformVerif,'Atau isi lewat Google Form ↗','btn sm')}</p>`:''}</div>
+ ${!u?lockCard('Masuk untuk mengajukan','Akun diperlukan agar status pengajuanmu dapat dipantau.','organisasi'):`
+ <div class="card" style="margin-top:1rem"><b>Formulir pengajuan</b><form id="fo" class="stack" style="margin-top:.6rem">
+ <div class="two">${sl('oj','Jenis organisasi',['Komunitas','Yayasan','Lembaga pendidikan','Perusahaan (CSR)','Instansi pemerintah','Lainnya'])}${fl('on','Nama resmi organisasi')}${fl('ot','Tahun berdiri','number','required min="1900" max="2100"')}${sl('of','Fokus utama',KATS)}${fl('ok','Kota atau kabupaten')}${fl('op','Provinsi')}</div>
+ ${fl('oa','Alamat sekretariat')}
+ <div class="two">${sl('ol','Status legalitas',['Akta pendirian','SK Kemenkumham','NIB','Surat keterangan desa/kelurahan','Belum berbadan hukum'])}${fl('oy','Nomor dokumen (jika ada)','text','')}</div>
+ ${fl('ob','Tautan berkas bukti (Google Drive)','url')}
+ <div class="two">${fl('pn','Nama penanggung jawab')}${fl('pj','Jabatan')}${fl('pw','Nomor WhatsApp','tel')}${fl('pe','Email penanggung jawab','email')}</div>
+ ${fl('ow','Website atau Instagram','url')}
+ <div><label for="od">Deskripsi program lingkungan</label><textarea id="od" rows="3" required></textarea></div>
+ <label class="check"><input type="checkbox" required><span>Data yang saya isi benar dan saya bersedia dihubungi admin untuk verifikasi.</span></label>
+ <button class="btn alt" type="submit">Kirim pengajuan</button></form></div>
+ ${mine.length?`<div class="card" style="margin-top:1rem"><b>Status pengajuan saya</b><table>${mine.map(o=>`<tr><td>${esc(o.n)}</td><td>${st(o.v)}</td></tr>`).join('')}</table></div>`:''}
+ ${myv.length?`<div class="card" style="margin-top:1rem"><b>Terbitkan kegiatan relawan</b><form id="fe" class="stack" style="margin-top:.6rem">
+ <div><label for="eo">Organisasi</label><select id="eo">${myv.map(o=>`<option value="${esc(o.id)}">${esc(o.n)}</option>`).join('')}</select></div>
+ ${fl('en','Nama kegiatan')}<div class="two">${fl('et','Waktu','datetime-local')}${fl('el','Lokasi')}${sl('ek','Kategori',KATS)}${fl('eg','Tautan foto (opsional)','url','')}</div>
+ ${fl('eu','Tautan pendaftaran (Google Form)','url')}<button class="btn alt" type="submit">Terbitkan di Youth Action</button></form></div>`:''}
+ ${isAdm()?`<div class="card" style="margin-top:1rem"><b>Antrean verifikasi (admin)</b>${pend.length?`<table>${pend.map(o=>`<tr><td>${esc(o.n)}<br><small>${esc(o.kota)} · ${esc(o.owner)}</small><div id="vd-${esc(o.id)}"></div></td><td><button class="btn sm" style="background:var(--mist)" data-vd="${esc(o.id)}">Berkas</button> <button class="btn sm alt" data-vf="${esc(o.id)}|1">Verifikasi</button> <button class="btn sm" style="background:var(--mist)" data-vf="${esc(o.id)}|2">Tolak</button></td></tr>`).join('')}</table>`:'<p class="sub">Tidak ada antrean.</p>'}</div>`:''}`}`},
+
+akun(){const u=S.get('user',null);
+ if(!u)return`<h2>Masuk atau daftar</h2><p class="sub">Akun GreenAksi diperlukan untuk melapor, mendaftar relawan, dan berdonasi. Dampakmu tercatat di halaman ini.</p>
+ <div class="two"><div class="card"><b>Daftar akun baru</b><form id="fd"><label for="dn">Nama</label><input id="dn" required><label for="de">Email</label><input id="de" type="email" required><label for="dp">Kata sandi (min. 6 karakter)</label><input id="dp" type="password" required><button class="btn alt" type="submit">Daftar</button></form><p id="dm" style="color:var(--red);font-size:.9rem"></p></div>
+ <div class="card"><b>Sudah punya akun</b><form id="fl"><label for="le">Email</label><input id="le" type="email" required><label for="lp">Kata sandi</label><input id="lp" type="password" required><button class="btn alt" type="submit">Masuk</button></form><p id="lm" style="color:var(--red);font-size:.9rem"></p></div></div>`;
+ const i=impact(),lv=i.pts>=300?'Penjaga Bumi':i.pts>=150?'Penggerak':i.pts>=50?'Pelopor':'Pemula';
+ const B=[['🗺️','Pelapor',i.r>=1],['🙌','Relawan',i.v>=1],['🌱','Donatur',i.d>0],['📚','Pembelajar',i.c>=2]];
+ const reps=S.get('reports',[]).filter(x=>x.owner===u.email),regs=S.get('regs',[]).map(String),dons=S.get('dons',[]);
+ const nm=id=>(PL.find(x=>x.id===id)||allEvents().find(x=>String(x.id)===id)||{n:id}).n;
+ const rows=[...reps.map(r=>['🗺️','Laporan '+TYPE[r.t][0]+': '+r.n]),...regs.map(r=>['🙌','Relawan: '+nm(r)]),...dons.map(d=>['🌱','Donasi '+rp(d.amt)+' untuk '+((FD.find(f=>f.id===d.id)||{}).n||'program')])];
+ return`<h2>Akun saya</h2><div class="card" style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:.6rem;align-items:center"><div><b>${esc(u.nama)}</b><p style="font-size:.9rem">${esc(u.email)}</p>${isAdm()?'<span class="tag">Admin</span>':''}</div><button class="btn sm" id="out" style="background:var(--mist)">Keluar</button></div>
+ <h2 style="margin-top:2rem">My Impact</h2><p class="sub">Poin dihitung otomatis dari laporan, pendaftaran relawan, donasi, dan tantangan mingguan.</p>
+ <div class="card"><div class="lvl">${i.pts} poin</div><b>Level: ${lv}</b><div class="bar"><i style="width:${Math.min(100,i.pts/300*100)}%"></i></div><p style="font-size:.85rem;color:#4a6558">Target 300 poin menuju Penjaga Bumi</p></div>
+ <div class="stats"><div><strong>${i.r}</strong>laporan dikirim</div><div><strong>${i.v}</strong>relawan didaftar</div><div><strong>${rp(i.d)}</strong>donasi</div><div><strong>${i.c}</strong>tantangan minggu ini</div></div>
+ <h2 style="font-size:1.2rem">Lencana</h2><div class="grid">${B.map(b=>`<div class="card badge ${b[2]?'got':''}"><div class="ico">${b[0]}</div><b>${b[1]}</b></div>`).join('')}</div>
+ <h2 style="font-size:1.2rem;margin-top:1.6rem">Riwayat aksi</h2><div class="card">${rows.length?`<table>${rows.map(r=>`<tr><td>${r[0]}</td><td>${esc(r[1])}</td></tr>`).join('')}</table>`:'<p class="sub" style="margin:0">Belum ada aksi. Mulai dari <a href="#greenmap">GreenMap</a>, <a href="#youth">Youth Action</a>, atau <a href="#ecolearn">EcoLearn</a>.</p>'}</div>`}
 };
 
-/* ============ INTERAKSI ============ */
+/* ===== INTERAKSI ===== */
 let picked=null;
+const g=id=>$('#'+id).value.trim();
 const INIT={
 greenmap(){
  map=L.map('map').setView([-2.5,118],5);
  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap'}).addTo(map);
  const layer=L.layerGroup().addTo(map);let f='semua',pin=null;
- const draw=()=>{layer.clearLayers();[...MARKERS,...S.get('reports',[])].filter(m=>f==='semua'||m.t===f).forEach(m=>
-  L.circleMarker([m.lat,m.lng],{radius:9,color:'#fff',weight:2,fillColor:TYPE[m.t][1],fillOpacity:1}).bindPopup(`<b>${esc(m.n)}</b><br>${TYPE[m.t][0]}<br>${esc(m.d)}`).addTo(layer));let n=0;layer.eachLayer(l=>{if(l._path)l._path.style.animationDelay=(n++*80)+'ms'})};
+ const draw=()=>{layer.clearLayers();[...MK,...S.get('reports',[]).map(r=>({...r,i:r.d}))].filter(m=>f==='semua'||m.t===f).forEach(m=>
+  L.circleMarker([m.lat,m.lng],{radius:8,color:'#fff',weight:2,fillColor:TYPE[m.t][1],fillOpacity:1}).bindPopup(pop(m)).addTo(layer));let n=0;layer.eachLayer(l=>{if(l._path)l._path.style.animationDelay=Math.min(n++*25,1200)+'ms'})};
  $('#chips').innerHTML=['semua',...Object.keys(TYPE)].map(k=>`<button class="chip ${k===f?'on':''}" data-f="${k}">${k==='semua'?'Semua':TYPE[k][0]}</button>`).join('');
- $('#chips').onclick=e=>{const k=e.target.dataset.f;if(!k)return;f=k;document.querySelectorAll('.chip').forEach(c=>c.classList.toggle('on',c.dataset.f===k));draw();const ls=layer.getLayers();if(ls.length)map.flyToBounds(L.featureGroup(ls).getBounds().pad(.4),{duration:1.2,maxZoom:8})};
+ $('#chips').onclick=e=>{const k=e.target.dataset.f;if(!k)return;f=k;document.querySelectorAll('#chips .chip').forEach(c=>c.classList.toggle('on',c.dataset.f===k));draw();const ls=layer.getLayers();if(ls.length)map.flyToBounds(L.featureGroup(ls).getBounds().pad(.4),{duration:1.2,maxZoom:8})};
  draw();picked=null;
- map.on('click',e=>{picked=e.latlng;if(pin)pin.remove();pin=L.marker(e.latlng).addTo(map);$('#coord').textContent=`Lokasi dipilih: ${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)}`});
- $('#rf').onsubmit=e=>{e.preventDefault();if(!S.get('user',null)){location.hash='#akun';return}
-  if(!picked){$('#rmsg').innerHTML='<p class="ok" style="background:#fbe4df">Pilih titik lokasi di peta terlebih dahulu.</p>';return}
-  add('reports',{t:$('#rt').value,n:$('#rn').value,d:$('#rd').value,lat:picked.lat,lng:picked.lng,owner:me()});
-  $('#rmsg').innerHTML='<p class="ok">Laporan terkirim. +20 poin untuk My Impact ✓</p>';e.target.reset();if(pin)pin.remove();picked=null;draw()}},
+ const rf=$('#rf');if(rf){
+  map.on('click',e=>{picked=e.latlng;if(pin)pin.remove();pin=L.marker(e.latlng).addTo(map);$('#coord').textContent=`Lokasi dipilih: ${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)}`});
+  rf.onsubmit=e=>{e.preventDefault();
+   if(!picked){$('#rmsg').innerHTML='<p class="ok" style="background:#fbe4df">Pilih titik lokasi di peta terlebih dahulu.</p>';return}
+   add('reports',{t:$('#rt').value,n:g('rn'),d:g('rd'),lat:picked.lat,lng:picked.lng,owner:me()});
+   $('#rmsg').innerHTML='<p class="ok">Laporan terkirim. +20 poin untuk dampakmu ✓</p>';rf.reset();if(pin)pin.remove();picked=null;draw()}}},
 youth(){
- $('#app').onclick=e=>{const id=e.target.dataset.reg;if(!id)return;
-  if(!S.get('user',null)){location.hash='#akun';return}
-  $('#regform').innerHTML=`<div class="card" style="margin-top:1rem"><b>Daftar: ${esc(allEvents().find(x=>String(x.id)===id).n)}</b>
-  <form id="f2"><label for="nm">Nama</label><input id="nm" required><label for="em">Email</label><input id="em" type="email" required>
-  <button class="btn alt" type="submit">Kirim pendaftaran</button></form></div>`;
-  $('#f2').onsubmit=ev=>{ev.preventDefault();const r=S.get('regs',[]);r.push(id);S.set('regs',r);go(true)};
-  $('#regform').scrollIntoView({behavior:'smooth'})}},
-greenfund(){
- $('#app').onclick=e=>{const v=e.target.dataset.don;if(!v)return;const[id,amt]=v.split('|').map(Number);
-  const d=S.get('dons',[]);d.push({id,amt});S.set('dons',d);go(true);
-  $('#dmsg').innerHTML=`<p class="ok">Terima kasih! Donasi simulasi ${rp(amt)} tercatat ✓</p>`}},
+ $('#kf').onclick=e=>{const k=e.target.dataset.kf;if(!k)return;document.querySelectorAll('#kf .chip').forEach(c=>c.classList.toggle('on',c.dataset.kf===k));document.querySelectorAll('#app .pl').forEach(c=>c.style.display=(k==='Semua'||c.dataset.k===k)?'':'none')};
+ $('#app').onclick=e=>{const id=e.target.dataset.reg;if(id)regModal(id)}},
+greenfund(){$('#app').onclick=e=>{const id=e.target.dataset.don;if(id)donModal(id)}},
 ecolearn(){
- $('#app').onchange=e=>{const i=e.target.dataset.ch;if(i===undefined)return;
-  const all=S.get('chal',{}),cur=new Set(all[WEEK]||[]);e.target.checked?cur.add(+i):cur.delete(+i);all[WEEK]=[...cur];S.set('chal',all)}},
-akun(){if(S.get('user',null)){$('#out').onclick=()=>logout();return}
- $('#fd').onsubmit=e=>{e.preventDefault();const em=$('#de').value.trim().toLowerCase(),us=S.get('users',[]);
-  if(us.some(x=>x.email===em)||em===ADMIN.email){$('#dm').textContent='Email sudah terdaftar.';return}
-  if($('#dp').value.length<6){$('#dm').textContent='Kata sandi minimal 6 karakter.';return}
-  if(CLOUD){CLOUDAPI.signup($('#dn').value.trim(),em,$('#dp').value).catch(er=>{$('#dm').textContent=er.code==='auth/email-already-in-use'?'Email sudah terdaftar.':'Gagal daftar: '+er.code});return}
-  const n={nama:$('#dn').value.trim(),email:em,pw:h($('#dp').value),role:'member'};us.push(n);S.set('users',us);S.set('user',n);go()};
- $('#fl').onsubmit=e=>{e.preventDefault();if(CLOUD){CLOUDAPI.login($('#le').value.trim(),$('#lp').value).catch(()=>{$('#lm').textContent='Email atau kata sandi salah.'});return}const em=$('#le').value.trim().toLowerCase(),p=h($('#lp').value),x=[ADMIN,...S.get('users',[])].find(z=>z.email===em&&z.pw===p);
-  if(!x){$('#lm').textContent='Email atau kata sandi salah.';return}S.set('user',x);go()}},
+ $('#af').onclick=e=>{const k=e.target.dataset.af;if(!k)return;document.querySelectorAll('#af .chip').forEach(c=>c.classList.toggle('on',c.dataset.af===k));document.querySelectorAll('#ag .art').forEach(c=>c.style.display=(k==='Semua'||c.dataset.a===k)?'':'none')};
+ $('#app').onchange=e=>{const i=e.target.dataset.ch;if(i===undefined)return;const all=S.get('chal',{}),cur=new Set(all[WEEK]||[]);e.target.checked?cur.add(+i):cur.delete(+i);all[WEEK]=[...cur];S.set('chal',all)}},
 organisasi(){const u=S.get('user',null);
- $('#app').onclick=e=>{const v=e.target.dataset.vf;if(!v)return;const[id,s]=v.split('|');upd('orgs',id,{v:+s});go()};
- const f=$('#fo');if(f)f.onsubmit=e=>{e.preventDefault();add('orgs',{n:$('#on').value.trim(),kota:$('#ok').value.trim(),link:$('#ol').value.trim(),owner:u.email,v:0});go()};
- const g=$('#fe');if(g)g.onsubmit=e=>{e.preventDefault();add('orgevents',{n:$('#en').value.trim(),tgl:new Date($('#et').value).toLocaleString('id-ID',{dateStyle:'medium',timeStyle:'short'}),lok:$('#el').value.trim(),k:$('#ek').value,q:+$('#eq').value,by:$('#eo').value,owner:u.email});location.hash='#youth'}},
-myimpact(){$('#reset').onclick=()=>{if(confirm('Hapus semua data kontribusimu di perangkat ini?')){['reports','regs','dons','chal'].forEach(k=>localStorage.removeItem('ga_'+k));go()}}}
+ $('#app').onclick=async e=>{const v=e.target.dataset.vf,d=e.target.dataset.vd;
+  if(v){const[id,s]=v.split('|');await upd('orgs',id,{v:+s});go(true)}
+  if(d){const p=await getPriv(d),box=$('#vd-'+d);box.innerHTML=p?`<div class="ok" style="font-size:.8rem">Tahun ${esc(p.tahun)} · ${esc(p.alamat)}<br>Legalitas: ${esc(p.legal)} ${esc(p.noLegal||'')}<br>PJ: ${esc(p.pj)} (${esc(p.jab)}) · ${esc(p.wa)} · ${esc(p.email)}<br>${esc(p.desk)}<br>${A(p.bukti,'Buka berkas ↗')}</div>`:'<div class="ok">Berkas tidak ditemukan.</div>'}};
+ const fo=$('#fo');if(fo)fo.onsubmit=async e=>{e.preventDefault();
+  await addOrg({n:g('on'),kota:g('ok'),prov:g('op'),fokus:g('of'),jenis:g('oj'),web:g('ow'),owner:u.email,v:0},{tahun:g('ot'),alamat:g('oa'),legal:g('ol'),noLegal:g('oy'),bukti:g('ob'),pj:g('pn'),jab:g('pj'),wa:g('pw'),email:g('pe'),desk:g('od')});
+  fo.reset();mod('<h3>Pengajuan terkirim</h3><p>Admin akan meninjau berkasmu. Pantau statusnya di halaman ini.</p>');go(true)};
+ const fe=$('#fe');if(fe)fe.onsubmit=e=>{e.preventDefault();const o=allOrgs().find(z=>String(z.id)===$('#eo').value);
+  add('orgevents',{orgId:String($('#eo').value),by:o.n,n:g('en'),tgl:new Date($('#et').value).toLocaleString('id-ID',{dateStyle:'medium',timeStyle:'short'}),lok:g('el'),kat:$('#ek').value,foto:g('eg'),link:g('eu'),owner:u.email});location.hash='#youth'}},
+akun(){
+ if(S.get('user',null)){$('#out').onclick=()=>logout();return}
+ $('#fd').onsubmit=e=>{e.preventDefault();const em=g('de').toLowerCase(),us=S.get('users',[]);
+  if(us.some(x=>x.email===em)){$('#dm').textContent='Email sudah terdaftar.';return}
+  if($('#dp').value.length<6){$('#dm').textContent='Kata sandi minimal 6 karakter.';return}
+  if(CLOUD){CLOUDAPI.signup(g('dn'),em,$('#dp').value).catch(er=>{$('#dm').textContent=er.code==='auth/email-already-in-use'?'Email sudah terdaftar.':'Gagal mendaftar: '+er.code});return}
+  const n={nama:g('dn'),email:em,pw:h($('#dp').value)};us.push(n);S.set('users',us);S.set('user',n);afterAuth()};
+ $('#fl').onsubmit=e=>{e.preventDefault();
+  if(CLOUD){CLOUDAPI.login(g('le'),$('#lp').value).catch(()=>{$('#lm').textContent='Email atau kata sandi salah.'});return}
+  const em=g('le').toLowerCase(),x=S.get('users',[]).find(z=>z.email===em&&z.pw===h($('#lp').value));
+  if(!x){$('#lm').textContent='Email atau kata sandi salah.';return}S.set('user',x);afterAuth()}}
 };
 go();
+
 </script>
 <script type="module">
 if(CLOUD){
@@ -303,10 +459,13 @@ CLOUDAPI={
  login:(e,p)=>A.signInWithEmailAndPassword(auth,e,p),
  logout:()=>A.signOut(auth),
  add:(c,o)=>F.addDoc(F.collection(db,c),{...o,at:F.serverTimestamp()}),
- upd:(c,id,o)=>F.updateDoc(F.doc(db,c,id),o)};
-A.onAuthStateChanged(auth,u=>{C.user=u?{nama:u.displayName||u.email,email:u.email,uid:u.uid,role:ADMINS.includes(u.email)?'admin':'member'}:null;refresh()});
+ upd:(c,id,o)=>F.updateDoc(F.doc(db,c,id),o),
+ addOrg:async(pub,priv)=>{const r=await F.addDoc(F.collection(db,'orgs'),{...pub,at:F.serverTimestamp()});await F.setDoc(F.doc(db,'orgdocs',r.id),{...priv,owner:pub.owner})},
+ getPriv:async id=>{const s=await F.getDoc(F.doc(db,'orgdocs',id));return s.exists()?s.data():null}};
+A.onAuthStateChanged(auth,u=>{C.user=u?{nama:u.displayName||u.email,email:u.email,uid:u.uid}:null;if(u&&hasNext())afterAuth();else refresh()});
 ['reports','orgs','orgevents'].forEach(k=>F.onSnapshot(F.collection(db,k),s=>{C[k]=s.docs.map(d=>({...d.data(),id:d.id}));refresh()}));
 }
+
 </script>
 </body>
 </html>
