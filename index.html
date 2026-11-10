@@ -94,6 +94,9 @@ details{margin-top:.8rem}summary{cursor:pointer;font-weight:700;font-size:.9rem}
 .art{display:block;text-decoration:none}.art small{color:#4a6558}.art b{font-size:.95rem}
 a.chip{text-decoration:none}.btn:disabled{opacity:.4;cursor:not-allowed}
 h3{margin-bottom:.3rem}
+.mis{position:relative;display:flex;flex-direction:column;gap:.6rem;cursor:pointer}.mis input{position:absolute;opacity:0;pointer-events:none}
+.mis .n{width:2rem;height:2rem;border-radius:50%;background:var(--mist);display:grid;place-items:center;font-weight:800}
+.mis.ok2{border-color:var(--leaf);background:#e3f4ea}.mis.ok2 .n{background:var(--leaf);color:#fff}.mis:focus-within{outline:3px solid var(--river)}
 </style>
 </head>
 <body>
@@ -134,7 +137,7 @@ const needLogin=n=>{try{sessionStorage.setItem('ga_next',n)}catch(e){}location.h
 document.addEventListener('click',e=>{const a=e.target.closest('[data-next]');if(a)try{sessionStorage.setItem('ga_next','#'+a.dataset.next)}catch(_){}});
 
 /* ===== DATA ===== */
-const PAGES=[['beranda','Beranda'],['greenmap','GreenMap'],['youth','Youth Action'],['greenfund','GreenFund'],['ecolearn','EcoLearn'],['organisasi','Organisasi'],['akun','Akun']];
+const PAGES=[['beranda','Beranda'],['greenmap','GreenMap'],['youth','Youth Action'],['greenfund','GreenFund'],['ecolearn','EcoLearn'],['misi','Misi'],['organisasi','Organisasi'],['akun','Akun']];
 const TOOLS=[
  ['greenmap','🗺️','GreenMap','Peta interaktif kondisi lingkungan di berbagai wilayah Indonesia, lengkap dengan fitur lapor masalah.'],
  ['youth','🙌','Youth Action','Temukan platform dan kegiatan relawan lingkungan, lalu daftar langsung ke penyelenggaranya.'],
@@ -305,7 +308,7 @@ function donModal(id){const u=S.get('user',null);if(!u)return needLogin('#greenf
  ok.onclick=()=>{const x=S.get('dons',[]);x.push({id,amt,at:Date.now()});S.set('dons',x);closeMod();go(true)}}
 
 /* ===== TAMPILAN ===== */
-const pop=m=>{const s=m.u?['Sumber berita',m.u]:SRC[m.t];return`<b>${esc(m.n)}</b><br><i>${TYPE[m.t][0]}</i><br>${esc(m.i||DEF[m.t]||'')}<br>${m.owner?'Laporan warga GreenAksi':`<a href="${esc(s[1])}" target="_blank" rel="noopener">Sumber: ${s[0]} ↗</a>`}`};
+const pop=m=>{const s=m.u?['Sumber berita',m.u]:SRC[m.t];return`<b>${esc(m.n)}</b><br><i>${TYPE[m.t][0]}</i><br>${esc(m.i||DEF[m.t]||'')}<br>${m.foto?`<img src="${esc(m.foto)}" alt="Foto laporan" style="width:180px;border-radius:8px;margin:.3rem 0"><br>`:''}${m.owner?'Laporan warga GreenAksi':`<a href="${esc(s[1])}" target="_blank" rel="noopener">Sumber: ${s[0]} ↗</a>`}`};
 const VIEWS={
 beranda(){const i=impact();return`
  <section class="hero"><i class="lf" style="left:62%;top:14%">🍃</i><i class="lf" style="left:80%;top:52%;animation-delay:-2.5s">🌿</i><i class="lf" style="left:90%;top:12%;animation-delay:-5s">🍃</i>
@@ -322,6 +325,7 @@ greenmap(){const u=S.get('user',null);return`<h2>GreenMap</h2><p class="sub">Kaw
  <form id="rf"><div class="two"><div><label for="rt">Jenis</label><select id="rt">${['banjir','longsor','karhutla','pencemaran'].map(k=>`<option value="${k}">${TYPE[k][0]}</option>`).join('')}</select></div>
  <div><label for="rn">Nama lokasi</label><input id="rn" required placeholder="mis. Sungai dekat pasar"></div></div>
  <label for="rd">Deskripsi</label><textarea id="rd" rows="3" required></textarea>
+ <label for="rp">Foto kejadian (wajib)</label><input id="rp" type="file" accept="image/*" required><img id="rpv" alt="Pratinjau foto" style="display:none;max-width:200px;border-radius:10px">
  <p id="coord" class="sub" style="margin:0">Klik peta untuk memilih titik lokasi.</p>
  <button class="btn alt" type="submit">Kirim laporan</button></form><div id="rmsg"></div></div>`
  :lockCard('Ingin melaporkan masalah lingkungan?','Masuk atau daftar akun terlebih dahulu agar laporanmu tercatat dan masuk ke dampakmu.','greenmap')}
@@ -352,8 +356,12 @@ ecolearn(){const done=S.get('chal',{})[WEEK]||[];const AK=['Semua','Sampah','Ben
  <h2 style="font-size:1.2rem">Panduan pengelolaan sampah</h2><div class="grid">${PILAH.map(p=>`<a class="card art" style="border-left:6px solid ${p[2]}" href="${esc(p[3])}" target="_blank" rel="noopener"><b>${p[0]} ↗</b><p style="font-size:.9rem">${p[1]}</p></a>`).join('')}</div>
  <h2 style="font-size:1.2rem;margin-top:1.6rem">Edukasi mitigasi bencana</h2><div class="grid">${MITIGASI.map(p=>`<a class="card art" href="${esc(p[2])}" target="_blank" rel="noopener"><b>${p[0]} ↗</b><p style="font-size:.9rem">${p[1]}</p></a>`).join('')}</div>
  <h2 style="font-size:1.2rem;margin-top:1.6rem">Artikel pilihan</h2><div class="chips" id="af">${AK.map((k,i)=>`<button class="chip ${i?'':'on'}" data-af="${k}">${k}</button>`).join('')}</div><div class="grid" id="ag">${ART.map(lk).join('')}</div>
- <h2 style="font-size:1.2rem;margin-top:1.6rem">Weekly Eco-Challenge</h2><div class="card">${CHALLENGE.map((c,i)=>`<label class="check"><input type="checkbox" data-ch="${i}" ${done.includes(i)?'checked':''}><span>${c[0]} <span class="tag">+${c[1]} poin</span></span></label>`).join('')}</div>`},
+ <p style="margin-top:1.6rem"><a class="btn sm alt" href="#misi">Kerjakan misi mingguan →</a></p>`},
 
+misi(){const done=S.get('chal',{})[WEEK]||[],tot=CHALLENGE.reduce((a,b)=>a+b[1],0),got=done.reduce((a,i)=>a+CHALLENGE[i][1],0);
+ return`<h2>Misi mingguan</h2><p class="sub">Selesaikan misi kecil dalam kehidupan sehari-hari dan kumpulkan poin untuk My Impact. Misi diperbarui setiap minggu.</p>
+ <div class="card"><b>Progres minggu ini</b><div class="bar"><i style="width:${Math.round(got/tot*100)}%"></i></div><p style="font-size:.9rem">${got} dari ${tot} poin · ${done.length} dari ${CHALLENGE.length} misi selesai</p></div>
+ <div class="grid" style="margin-top:1rem">${CHALLENGE.map((c,i)=>`<label class="card mis ${done.includes(i)?'ok2':''}"><input type="checkbox" data-ch="${i}" ${done.includes(i)?'checked':''}><span class="n">${done.includes(i)?'✓':i+1}</span><b>${c[0]}</b><span class="tag">+${c[1]} poin</span></label>`).join('')}</div>`},
 organisasi(){const u=S.get('user',null),all=allOrgs(),ver=all.filter(o=>o.v===1),mine=u?all.filter(o=>o.owner===u.email):[],myv=mine.filter(o=>o.v===1),pend=all.filter(o=>o.v===0);
  const fl=(id,l,t='text',x='required')=>`<div><label for="${id}">${l}</label><input id="${id}" type="${t}" ${x}></div>`;
  const sl=(id,l,a)=>`<div><label for="${id}">${l}</label><select id="${id}">${a.map(v=>`<option>${v}</option>`).join('')}</select></div>`;
@@ -401,6 +409,7 @@ akun(){const u=S.get('user',null);
 
 /* ===== INTERAKSI ===== */
 let picked=null;
+const shrink=f=>new Promise((ok,no)=>{const r=new FileReader();r.onerror=no;r.onload=()=>{const im=new Image();im.onerror=no;im.onload=()=>{const s=Math.min(1,800/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*s);c.height=Math.round(im.height*s);c.getContext('2d').drawImage(im,0,0,c.width,c.height);ok(c.toDataURL('image/jpeg',.6))};im.src=r.result};r.readAsDataURL(f)});
 const g=id=>$('#'+id).value.trim();
 const INIT={
 greenmap(){
@@ -413,11 +422,13 @@ greenmap(){
  $('#chips').onclick=e=>{const k=e.target.dataset.f;if(!k)return;f=k;document.querySelectorAll('#chips .chip').forEach(c=>c.classList.toggle('on',c.dataset.f===k));draw();const ls=layer.getLayers();if(ls.length)map.flyToBounds(L.featureGroup(ls).getBounds().pad(.4),{duration:1.2,maxZoom:8})};
  draw();picked=null;
  const rf=$('#rf');if(rf){
+  $('#rp').onchange=async e=>{const f=e.target.files[0],v=$('#rpv');if(!f){v.style.display='none';return}try{v.src=await shrink(f);v.style.display='block'}catch(er){}};
   map.on('click',e=>{picked=e.latlng;if(pin)pin.remove();pin=L.marker(e.latlng).addTo(map);$('#coord').textContent=`Lokasi dipilih: ${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)}`});
-  rf.onsubmit=e=>{e.preventDefault();
+  rf.onsubmit=async e=>{e.preventDefault();
    if(!picked){$('#rmsg').innerHTML='<p class="ok" style="background:#fbe4df">Pilih titik lokasi di peta terlebih dahulu.</p>';return}
-   add('reports',{t:$('#rt').value,n:g('rn'),d:g('rd'),lat:picked.lat,lng:picked.lng,owner:me()});
-   $('#rmsg').innerHTML='<p class="ok">Laporan terkirim. +20 poin untuk dampakmu ✓</p>';rf.reset();if(pin)pin.remove();picked=null;draw()}}},
+   let foto;try{foto=await shrink($('#rp').files[0])}catch(er){$('#rmsg').innerHTML='<p class="ok" style="background:#fbe4df">Foto tidak bisa dibaca. Coba foto lain.</p>';return}
+   add('reports',{t:$('#rt').value,n:g('rn'),d:g('rd'),lat:picked.lat,lng:picked.lng,foto,owner:me()});
+   $('#rmsg').innerHTML='<p class="ok">Laporan terkirim. +20 poin untuk dampakmu ✓</p>';rf.reset();$('#rpv').style.display='none';if(pin)pin.remove();picked=null;draw()}}},
 youth(){
  $('#kf').onclick=e=>{const k=e.target.dataset.kf;if(!k)return;document.querySelectorAll('#kf .chip').forEach(c=>c.classList.toggle('on',c.dataset.kf===k));document.querySelectorAll('#app .pl').forEach(c=>c.style.display=(k==='Semua'||c.dataset.k===k)?'':'none')};
  $('#app').onclick=e=>{const id=e.target.dataset.reg;if(id)regModal(id)}},
@@ -425,6 +436,7 @@ greenfund(){$('#app').onclick=e=>{const id=e.target.dataset.don;if(id)donModal(i
 ecolearn(){
  $('#af').onclick=e=>{const k=e.target.dataset.af;if(!k)return;document.querySelectorAll('#af .chip').forEach(c=>c.classList.toggle('on',c.dataset.af===k));document.querySelectorAll('#ag .art').forEach(c=>c.style.display=(k==='Semua'||c.dataset.a===k)?'':'none')};
  $('#app').onchange=e=>{const i=e.target.dataset.ch;if(i===undefined)return;const all=S.get('chal',{}),cur=new Set(all[WEEK]||[]);e.target.checked?cur.add(+i):cur.delete(+i);all[WEEK]=[...cur];S.set('chal',all)}},
+misi(){$('#app').onchange=e=>{const i=e.target.dataset.ch;if(i===undefined)return;const all=S.get('chal',{}),cur=new Set(all[WEEK]||[]);e.target.checked?cur.add(+i):cur.delete(+i);all[WEEK]=[...cur];S.set('chal',all);go(true)}},
 organisasi(){const u=S.get('user',null);
  $('#app').onclick=async e=>{const v=e.target.dataset.vf,d=e.target.dataset.vd;
   if(v){const[id,s]=v.split('|');await upd('orgs',id,{v:+s});go(true)}
